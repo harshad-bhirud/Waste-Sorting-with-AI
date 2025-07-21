@@ -1,0 +1,1 @@
+# Waste-Sorting-with-AI
