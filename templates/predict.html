@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Waste Sorting Prediction</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .input-section {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            box-sizing: border-box;
+        }
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        img {
+            max-width: 100%;
+            max-height: 200px;
+            display: block;
+            margin: 10px auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results-section {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            min-height: 100px;
+            box-sizing: border-box;
+        }
+        .results-section h3 {
+            margin-top: 0;
+            color: #555;
+            text-align: center;
+        }
+        .loading {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+            text-align: center;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+            text-align: center;
+        }
+        pre {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                margin: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Waste Classification API</h2>
+
+    <div class="input-section">
+        <label for="imageUpload">Upload an image:</label>
+        <input type="file" id="imageUpload" accept="image/*">
+        <img id="imagePreview" src="#" alt="Image Preview" style="display: none;">
+        <button id="predictButton">Predict Waste Type</button>
+    </div>
+
+    <div class="results-section">
+        <h3>Prediction Results:</h3>
+        <p id="statusMessage" class="loading">Upload an image and click 'Predict'.</p>
+        <pre id="predictionOutput"></pre>
+    </div>
+</div>
+
+<script>
+    const imageUpload = document.getElementById('imageUpload');
+    const imagePreview = document.getElementById('imagePreview');
+    const predictButton = document.getElementById('predictButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const predictionOutput = document.getElementById('predictionOutput');
+
+    let base64Image = '';
+    // IMPORTANT: The API URL is now relative, as the HTML is served from the same Flask app.
+    // This simplifies CORS, as it's a same-origin request.
+    const FLASK_API_URL = '/predict'; 
+
+    imageUpload.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                base64Image = e.target.result.split(',')[1]; // Get only the base64 part
+                statusMessage.textContent = 'Image loaded. Click Predict.';
+                statusMessage.className = '';
+                predictionOutput.textContent = '';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            imagePreview.style.display = 'none';
+            base64Image = '';
+            statusMessage.textContent = 'No image selected.';
+            statusMessage.className = 'loading';
+            predictionOutput.textContent = '';
+        }
+    });
+
+    predictButton.addEventListener('click', async function() {
+        if (!base64Image) {
+            statusMessage.textContent = 'Please upload an image first!';
+            statusMessage.className = 'error';
+            return;
+        }
+
+        statusMessage.textContent = 'Predicting...';
+        statusMessage.className = 'loading';
+        predictionOutput.textContent = '';
+
+        try {
+            const response = await fetch(FLASK_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: base64Image }),
+            });
+
+            if (!response.ok) {
+                let errorDetails = `HTTP error! Status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData && errorData.error) {
+                        errorDetails += ` - ${errorData.error}`;
+                    }
+                } catch (jsonError) {
+                    errorDetails += ` - Could not parse error response: ${await response.text()}`;
+                }
+                throw new Error(errorDetails);
+            }
+
+            const result = await response.json();
+            statusMessage.textContent = 'Prediction successful!';
+            statusMessage.className = 'success';
+            predictionOutput.textContent = JSON.stringify(result, null, 2);
+
+        } catch (error) {
+            statusMessage.textContent = 'Error during prediction: ' + error.message;
+            statusMessage.className = 'error';
+            predictionOutput.textContent = '';
+            console.error('Fetch error:', error);
+        }
+    });
+</script>
+
+</body>
+</html>

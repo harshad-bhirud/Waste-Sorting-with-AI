@@ -1,0 +1,17 @@
+{
+  "plastic_bottle": {
+    "category": "Recyclable Plastic",
+    "instructions": "Rinse, remove cap, place in dry waste bin.",
+    "bin_color": "Blue"
+  },
+  "cardboard_box": {
+    "category": "Recyclable Paper/Cardboard",
+    "instructions": "Flatten, remove tape, place in dry waste bin.",
+    "bin_color": "Yellow"
+  },
+  "food_scraps": {
+    "category": "Organic/Compost",
+    "instructions": "Place in wet waste bin.",
+    "bin_color": "Green"
+  }
+}

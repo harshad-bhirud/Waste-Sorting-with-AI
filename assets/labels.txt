@@ -1,0 +1,3 @@
+cardboard
+compost
+plastic_bottle
